@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>선적비용 대조 툴 — 영천항운</title>
+<style>
+:root{
+  --bg:#fff;--bg2:#f5f5f4;--bg3:#eeeeed;
+  --text:#1a1a19;--text2:#5f5e5a;--text3:#888780;
+  --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.22);
+  --green:#1D9E75;--green-bg:#EAF3DE;--green-text:#3B6D11;
+  --red:#D85A30;--red-bg:#FAECE7;--red-text:#993C1D;
+  --amber:#BA7517;--amber-bg:#FAEEDA;--amber-text:#854F0B;
+  --blue:#378ADD;--blue-bg:#E6F1FB;--blue-text:#185FA5;
+  --r:10px;--rs:6px;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1e1e1d;--bg2:#2a2a28;--bg3:#333331;
+    --text:#f0efeb;--text2:#b4b2a9;--text3:#888780;
+    --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.22);
+    --green-bg:#04342C;--green-text:#9FE1CB;
+    --red-bg:#4A1B0C;--red-text:#F0997B;
+    --amber-bg:#412402;--amber-text:#FAC775;
+    --blue-bg:#042C53;--blue-text:#85B7EB;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh}
+.wrap{max-width:880px;margin:0 auto;padding:2rem 1.5rem}
+
+.header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1.75rem;padding-bottom:1.25rem;border-bottom:0.5px solid var(--border)}
+.header h1{font-size:18px;font-weight:600;margin-bottom:3px}
+.header p{font-size:13px;color:var(--text2)}
+.key-btn{flex-shrink:0;font-size:12px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;margin-top:2px}
+.key-btn:hover{background:var(--bg2)}
+
+.key-panel{background:var(--bg2);border-radius:var(--r);padding:1rem 1.25rem;margin-bottom:1.5rem;border:0.5px solid var(--border2)}
+.key-panel label{font-size:12px;color:var(--text2);display:block;margin-bottom:6px;font-weight:500}
+.key-row{display:flex;gap:8px}
+.key-row input{flex:1;padding:7px 10px;font-size:13px;border:0.5px solid var(--border2);border-radius:var(--rs);background:var(--bg);color:var(--text);font-family:'SF Mono',Consolas,monospace}
+.key-row input:focus{outline:none;border-color:var(--blue)}
+.key-save{padding:7px 14px;font-size:13px;border-radius:var(--rs);border:0.5px solid var(--border2);background:transparent;color:var(--text);cursor:pointer}
+.key-save:hover{background:var(--bg3)}
+.key-note{font-size:11px;color:var(--text3);margin-top:6px}
+
+.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem}
+.zone{border:1.5px dashed var(--border2);border-radius:var(--r);padding:1.5rem 1rem 1.25rem;text-align:center;cursor:pointer;transition:background .12s,border-color .12s;user-select:none}
+.zone:hover{background:var(--bg2)}
+.zone.has-file{border-style:solid;border-color:var(--green);background:var(--green-bg)}
+.zone.dragging{border-color:var(--blue);background:var(--blue-bg)}
+.zone-label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.zone svg{margin:0 auto 8px;display:block;opacity:.4}
+.zone-title{font-size:14px;font-weight:500;margin-bottom:3px}
+.zone-hint{font-size:12px;color:var(--text3)}
+.zone-info{font-size:12px;margin-top:10px;min-height:20px}
+
+#cmpBtn{width:100%;padding:11px;font-size:14px;font-weight:500;border-radius:var(--r);border:0.5px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;margin-bottom:1.25rem;transition:background .1s}
+#cmpBtn:not(:disabled):hover{background:var(--bg2)}
+#cmpBtn:disabled{opacity:.35;cursor:not-allowed}
+
+.loading{display:flex;align-items:center;gap:10px;padding:.875rem 1rem;background:var(--bg2);border-radius:var(--r);font-size:13px;color:var(--text2);margin-bottom:1rem}
+.spin{width:15px;height:15px;border:1.5px solid var(--border2);border-top-color:var(--text2);border-radius:50%;animation:sp .7s linear infinite;flex-shrink:0}
+@keyframes sp{to{transform:rotate(360deg)}}
+.err-box{padding:.875rem 1rem;background:var(--red-bg);border-radius:var(--r);font-size:13px;color:var(--red-text);margin-bottom:1rem}
+
+.extract-info{font-size:13px;color:var(--text2);padding:.75rem 1rem;background:var(--bg2);border-radius:var(--rs);margin-bottom:1rem;display:flex;gap:1.5rem;flex-wrap:wrap;align-items:center}
+.extract-info strong{color:var(--text)}
+
+.summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:1rem}
+.sc{background:var(--bg2);border-radius:var(--rs);padding:.625rem .75rem;cursor:pointer;border:2px solid transparent;transition:border-color .1s}
+.sc:hover{border-color:var(--border2)}
+.sc.on{border-color:var(--blue)}
+.sl{font-size:11px;color:var(--text2);margin-bottom:3px}
+.sv{font-size:20px;font-weight:600}
+.sv.ok{color:var(--green)}.sv.bad{color:var(--red)}.sv.con{color:var(--amber)}.sv.sas{color:var(--blue)}
+
+.filters{display:flex;gap:8px;margin-bottom:.875rem;flex-wrap:wrap}
+.filters button{font-size:12px;padding:4px 12px;border-radius:20px;border:0.5px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;transition:background .1s}
+.filters button.on{background:var(--blue-bg);color:var(--blue-text);border-color:var(--blue)}
+.filters button:hover:not(.on){background:var(--bg2)}
+
+.tbl-wrap{border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:.75rem}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+th{font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 10px;background:var(--bg2);border-bottom:0.5px solid var(--border)}
+td{padding:7px 10px;border-bottom:0.5px solid var(--border);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg2)}
+.mono{font-family:'SF Mono',Consolas,monospace;font-size:11px;color:var(--text2);word-break:break-all}
+
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.bm{background:var(--green-bg);color:var(--green-text)}
+.bx{background:var(--red-bg);color:var(--red-text)}
+.bc{background:var(--amber-bg);color:var(--amber-text)}
+.bs{background:var(--blue-bg);color:var(--blue-text)}
+
+.result-foot{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text3)}
+.csv-btn{padding:5px 12px;font-size:12px;border-radius:var(--rs);border:0.5px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer}
+.csv-btn:hover{background:var(--bg2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="header">
+  <div>
+    <h1>선적비용 대조 툴</h1>
+    <p>SAS 파일(영천항운)과 콘솔사 파일을 AI로 비교하여 금액 오차 및 누락을 확인합니다</p>
+  </div>
+  <button class="key-btn" onclick="toggleKey()">API 키 설정</button>
+</div>
+
+<div id="keyPanel" class="key-panel" style="display:none">
+  <label>Anthropic API Key</label>
+  <div class="key-row">
+    <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off">
+    <button class="key-save" onclick="saveKey()">저장</button>
+  </div>
+  <div class="key-note">키는 이 브라우저의 로컬 스토리지에만 저장됩니다. 서버로 전송되지 않습니다.</div>
+</div>
+
+<div class="upload-grid">
+  <div id="zone1" class="zone" onclick="clickZone(1)"
+       ondragover="onDrag(event,1,1)" ondragleave="onDrag(event,1,0)" ondrop="onDrop(event,1)">
+    <input type="file" id="file1" accept=".pdf" onchange="onFile(1,this)" style="display:none">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+      <path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M13 3v5a1 1 0 001 1h5M9 13h6M9 17h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <div class="zone-label">영천항운 관리 파일</div>
+    <div class="zone-title">SAS 파일</div>
+    <div class="zone-hint">AP LIST &middot; PDF</div>
+    <div class="zone-info" id="info1"></div>
+  </div>
+
+  <div id="zone2" class="zone" onclick="clickZone(2)"
+       ondragover="onDrag(event,2,1)" ondragleave="onDrag(event,2,0)" ondrop="onDrop(event,2)">
+    <input type="file" id="file2" accept=".pdf" onchange="onFile(2,this)" style="display:none">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+      <path d="M9 12h6M9 16h4M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M14 3v4a1 1 0 001 1h4" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+    <div class="zone-label">콘솔사 파일</div>
+    <div class="zone-title">인보이스 파일</div>
+    <div class="zone-hint">INVOICE LIST &middot; PDF</div>
+    <div class="zone-info" id="info2"></div>
+  </div>
+</div>
+
+<button id="cmpBtn" onclick="doCompare()" disabled>비교 분석하기</button>
+
+<div id="status"></div>
+<div id="results"></div>
+
+</div>
+<script>
+const S={f1:null,f2:null};
+
+function toggleKey(){
+  const p=document.getElementById('keyPanel');
+  const show=p.style.display==='none';
+  p.style.display=show?'block':'none';
+  if(show)document.getElementById('apiKey').value=localStorage.getItem('ant_key')||'';
+}
+function saveKey(){
+  const k=document.getElementById('apiKey').value.trim();
+  if(k)localStorage.setItem('ant_key',k);
+  document.getElementById('keyPanel').style.display='none';
+}
+
+function clickZone(n){document.getElementById('file'+n).click()}
+function onDrag(e,n,on){e.preventDefault();document.getElementById('zone'+n).classList[on?'add':'remove']('dragging')}
+function onDrop(e,n){e.preventDefault();document.getElementById('zone'+n).classList.remove('dragging');if(e.dataTransfer.files[0])applyFile(n,e.dataTransfer.files[0])}
+function onFile(n,inp){if(inp.files[0])applyFile(n,inp.files[0])}
+
+function applyFile(n,f){
+  S['f'+n]=f;
+  document.getElementById('zone'+n).classList.add('has-file');
+  const kb=f.size>1048576?(f.size/1048576).toFixed(1)+' MB':(f.size/1024).toFixed(0)+' KB';
+  document.getElementById('info'+n).innerHTML=
+    '<span style="color:var(--green);font-weight:500">&#10003; '+f.name+'</span><br>'+
+    '<span style="color:var(--text3)">'+kb+'</span>';
+  document.getElementById('cmpBtn').disabled=!(S.f1&&S.f2);
+}
+
+function toB64(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]);
+    r.onerror=rej;
+    r.readAsDataURL(file);
+  });
+}
+
+async function callAPI(b64,type){
+  const key=localStorage.getItem('ant_key')||'';
+  if(!key)throw new Error('API 키가 없습니다. 우측 상단 [API 키 설정]을 눌러 키를 입력해주세요.');
+
+  const prompt=type==='sas'
+    ?'이 PDF는 해운 AP LIST(청구서)입니다. 모든 선적 건을 아래 형식의 JSON 배열로만 반환하세요.\n'+
+     '형식: [{"no":행번호,"date":"YYYY-MM-DD","mbl":"M.B/L No","hbl":"H.B/L No","total":TOTAL금액정수}]\n'+
+     '- TOTAL은 각 행의 최종 합계(원화 정수, 콤마 제거)\n'+
+     '- 페이지 하단 TOTAL AMOUNT, SUB TOTAL 등 집계 행 제외\n'+
+     '- JSON 배열만 반환, 다른 텍스트 없음'
+    :'이 PDF는 해운 INVOICE LIST(SEA-IMPORT)입니다. 각 하우스 B/L 건을 아래 형식의 JSON 배열로만 반환하세요.\n'+
+     '형식: [{"date":"YYYY-MM-DD","houseNo":"House No","total":합계금액정수}]\n'+
+     '- total은 각 그룹 오른쪽 끝에 단독으로 표시된 합계 숫자(원화 정수, 콤마 제거)\n'+
+     '- GRAND TOTAL, M.Count, H.Count 행 제외\n'+
+     '- JSON 배열만 반환, 다른 텍스트 없음';
+
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:4000,
+      messages:[{role:'user',content:[
+        {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
+        {type:'text',text:prompt}
+      ]}]
+    })
+  });
+
+  if(!resp.ok){const t=await resp.text();throw new Error('API 오류 '+resp.status+': '+t.slice(0,200))}
+  const d=await resp.json();
+  if(d.error)throw new Error(d.error.message);
+
+  const txt=d.content.filter(c=>c.type==='text').map(c=>c.text).join('');
+  const clean=txt.replace(/^```(?:json)?\n?|\n?```$/gm,'').trim();
+  try{return JSON.parse(clean)}catch{
+    const m=clean.match(/\[[\s\S]*\]/);
+    if(m)return JSON.parse(m[0]);
+    throw new Error('응답 파싱 실패. PDF 형식을 확인하거나 다시 시도해주세요.');
+  }
+}
+
+function setSt(html){document.getElementById('status').innerHTML=html||''}
+
+async function doCompare(){
+  const btn=document.getElementById('cmpBtn');
+  btn.disabled=true;
+  document.getElementById('results').innerHTML='';
+  try{
+    setSt('<div class="loading"><div class="spin"></div>파일 변환 중...</div>');
+    const[b1,b2]=await Promise.all([toB64(S.f1),toB64(S.f2)]);
+    setSt('<div class="loading"><div class="spin"></div>SAS 파일 분석 중... AI가 선적 건을 추출하고 있습니다</div>');
+    const sasData=await callAPI(b1,'sas');
+    setSt('<div class="loading"><div class="spin"></div>콘솔사 파일 분석 중... 인보이스 항목을 추출하고 있습니다</div>');
+    const consData=await callAPI(b2,'cons');
+    setSt('');
+    buildResults(sasData,consData);
+  }catch(e){
+    setSt('<div class="err-box">&#9888; 오류: '+e.message+'</div>');
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+function buildResults(sas,cons){
+  const sasMap={};
+  sas.forEach(r=>sasMap[r.mbl]=r);
+  const rows=[];const seen=new Set();
+  cons.forEach(r=>{
+    seen.add(r.houseNo);
+    const se=sasMap[r.houseNo];
+    if(se)rows.push({mbl:r.houseNo,date:r.date||se.date,sas:se.total,cons:r.total,status:se.total===r.total?'match':'mismatch'});
+    else rows.push({mbl:r.houseNo,date:r.date,sas:null,cons:r.total,status:'cons-only'});
+  });
+  sas.forEach(r=>{if(!seen.has(r.mbl))rows.push({mbl:r.mbl,date:r.date,sas:r.total,cons:null,status:'sas-only'})});
+
+  const cnt={match:0,mismatch:0,co:0,so:0};
+  rows.forEach(r=>{
+    if(r.status==='match')cnt.match++;
+    else if(r.status==='mismatch')cnt.mismatch++;
+    else if(r.status==='cons-only')cnt.co++;
+    else cnt.so++;
+  });
+
+  document.getElementById('results').innerHTML=
+    '<div class="extract-info">'+
+    '<span>SAS <strong>'+sas.length+'건</strong> 추출</span>'+
+    '<span>콘솔사 <strong>'+cons.length+'건</strong> 추출</span>'+
+    '<span style="color:var(--text3);font-size:12px">매칭 키: MBL No = House No</span>'+
+    '</div>'+
+    '<div class="summary">'+
+    '<div class="sc" id="sc-all" onclick="flt(\'all\')"><div class="sl">전체</div><div class="sv">'+rows.length+'</div></div>'+
+    '<div class="sc" id="sc-match" onclick="flt(\'match\')"><div class="sl">금액 일치</div><div class="sv ok">'+cnt.match+'</div></div>'+
+    '<div class="sc" id="sc-mismatch" onclick="flt(\'mismatch\')"><div class="sl">금액 불일치</div><div class="sv bad">'+cnt.mismatch+'</div></div>'+
+    '<div class="sc" id="sc-cons-only" onclick="flt(\'cons-only\')"><div class="sl">콘솔사에만</div><div class="sv con">'+cnt.co+'</div></div>'+
+    '<div class="sc" id="sc-sas-only" onclick="flt(\'sas-only\')"><div class="sl">SAS에만</div><div class="sv sas">'+cnt.so+'</div></div>'+
+    '</div>'+
+    '<div class="filters">'+
+    '<button onclick="flt(\'all\')" class="on" id="fb-all">전체 ('+rows.length+')</button>'+
+    '<button onclick="flt(\'match\')" id="fb-match">일치 ('+cnt.match+')</button>'+
+    '<button onclick="flt(\'mismatch\')" id="fb-mismatch">불일치 ('+cnt.mismatch+')</button>'+
+    '<button onclick="flt(\'cons-only\')" id="fb-cons-only">콘솔사만 ('+cnt.co+')</button>'+
+    '<button onclick="flt(\'sas-only\')" id="fb-sas-only">SAS만 ('+cnt.so+')</button>'+
+    '</div>'+
+    '<div class="tbl-wrap"><table><colgroup>'+
+    '<col style="width:90px"><col><col style="width:110px"><col style="width:110px"><col style="width:90px"><col style="width:72px">'+
+    '</colgroup><thead><tr>'+
+    '<th>날짜</th><th>M.B/L No</th>'+
+    '<th style="text-align:right">SAS 금액</th>'+
+    '<th style="text-align:right">콘솔사 금액</th>'+
+    '<th style="text-align:right">차액</th>'+
+    '<th>상태</th>'+
+    '</tr></thead><tbody id="mtbody"></tbody></table></div>'+
+    '<div class="result-foot"><span id="tfoot"></span><button class="csv-btn" onclick="exportCSV()">CSV 내보내기</button></div>';
+
+  window._rows=rows;
+  document.getElementById('sc-all').classList.add('on');
+  drawT(rows);
+}
+
+function flt(f){
+  document.querySelectorAll('.sc,.filters button').forEach(el=>el.classList.remove('on'));
+  const sc=document.getElementById('sc-'+f);
+  const fb=document.getElementById('fb-'+f);
+  if(sc)sc.classList.add('on');
+  if(fb)fb.classList.add('on');
+  drawT(f==='all'?window._rows:window._rows.filter(r=>r.status===f));
+}
+
+function drawT(rows){
+  const fmt=n=>n==null?'—':n.toLocaleString('ko-KR')+'원';
+  const lbl={match:'일치',mismatch:'불일치','cons-only':'콘솔사만','sas-only':'SAS만'};
+  const cl={match:'bm',mismatch:'bx','cons-only':'bc','sas-only':'bs'};
+  document.getElementById('mtbody').innerHTML=rows.map(r=>{
+    const diff=r.sas!=null&&r.cons!=null?r.sas-r.cons:null;
+    const ds=diff===0?'—':(diff!=null?'<span style="color:var(--red);font-size:12px">'+(diff>0?'+':'')+diff.toLocaleString('ko-KR')+'</span>':'—');
+    return '<tr>'+
+      '<td style="font-size:12px;color:var(--text2)">'+(r.date||'—')+'</td>'+
+      '<td class="mono">'+r.mbl+'</td>'+
+      '<td style="text-align:right">'+fmt(r.sas)+'</td>'+
+      '<td style="text-align:right">'+fmt(r.cons)+'</td>'+
+      '<td style="text-align:right">'+ds+'</td>'+
+      '<td><span class="badge '+cl[r.status]+'">'+lbl[r.status]+'</span></td>'+
+      '</tr>';
+  }).join('');
+  document.getElementById('tfoot').textContent=rows.length+'건 표시';
+}
+
+function exportCSV(){
+  if(!window._rows||!window._rows.length)return;
+  const h='날짜,M.B/L No,SAS 금액,콘솔사 금액,차액,상태';
+  const lbl={match:'일치',mismatch:'불일치','cons-only':'콘솔사만','sas-only':'SAS만'};
+  const lines=window._rows.map(r=>{
+    const diff=r.sas!=null&&r.cons!=null?r.sas-r.cons:'';
+    return[r.date||'',r.mbl,r.sas!=null?r.sas:'',r.cons!=null?r.cons:'',diff,lbl[r.status]].join(',');
+  });
+  const blob=new Blob(['\uFEFF'+h+'\n'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='선적비용_대조_'+(new Date().toISOString().slice(0,10))+'.csv';
+  a.click();
+}
+</script>
+</body>
+</html>
